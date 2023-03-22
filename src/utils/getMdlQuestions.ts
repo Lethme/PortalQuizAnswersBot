@@ -1,22 +1,31 @@
 import {Question} from "../types/Question";
 import Questions from "../types/Questions";
+import {isDevelopmentMode} from "./isDevelopmentMode";
+import Logger from "./Logger";
 import {readFileAsync} from "./readFileAsync";
 import {trimSubstr} from "./trimSubstr";
 
 export const getMdlQuestions = async () => {
+    Logger.Log(`Reading data from file: ${process.env.MDL_DATA_FILE}`, "Reader");
+
     const data = await readFileAsync(process.env.MDL_DATA_FILE as string);
     // const regexGlobal = /\(([^,]+),\s*([^,]+),\s*([^,]+),\s*'([^']*)',\s*([^,]+),\s*([^,]+),\s*'([^']*)',\s*'([^']*)',\s*'([^']*)',\s*([^,]+),\s*'([^']*)',\s*'([^']*)',\s*'([^']*)',\s*([^)]+)\)/g;
     // const regex = /\(([^,]+),\s*([^,]+),\s*([^,]+),\s*'([^']*)',\s*([^,]+),\s*([^,]+),\s*'([^']*)',\s*'([^']*)',\s*'([^']*)',\s*([^,]+),\s*'([^']*)',\s*'([^']*)',\s*'([^']*)',\s*([^)]+)\)/;
     const regexGlobal = /\('((?:\\.|[^'\\])+?)'\s*,\s*'((?:\\.|[^'\\])+?)'\)/g;
     const regex = /'((?:[^'\\]|\\.)+?)'/g;
     const regexInner = /'([^']*)'/g;
+
+    Logger.Log("Searching for SQL inserts in raw data...", "Parser");
+
     const match = data.match(regexGlobal);
 
     let questionsMap: Map<string, string> = new Map();
     let questions: Questions = new Questions(questionsMap);
 
+    Logger.LogLine("Parsing raw questions...", "Parser", true, "start");
+
     if (match) {
-        for (const insertMatch of match) {
+        for (const [index, insertMatch] of match.entries()) {
             const quotedValuesMatch = insertMatch.match(regex);
 
             if (quotedValuesMatch) {
@@ -31,19 +40,42 @@ export const getMdlQuestions = async () => {
 
                 if (!questionsMap.has(question.question)) {
                     questionsMap.set(question.question, question.answer);
+
+                    if (isDevelopmentMode()) {
+                        if (index > 0) {
+                            process.stdout.write('\x1B[1A\x1B[0G');
+                        }
+
+                        Logger.Log(`${index + 1}/${match.length} (Unique questions found: ${questionsMap.size})`, "Parser", index === match.length - 1);
+                    }
                 }
             }
         }
 
-        const uniqueQuestions: {[key: string]: Question} = {};
+        const uniqueQuestions: { [key: string]: Question } = {};
+
+        Logger.LogLine("Removing questions containing permutations...", "Parser", true, "start");
+
+        let index = 0;
+        let uniqueQuestionsCount = 0;
 
         for (const [question, answer] of questionsMap.entries()) {
             const sortedQuestion = question.split("").sort().join("");
+
+            if (isDevelopmentMode()) {
+                if (index > 0) {
+                    process.stdout.write('\x1B[1A\x1B[0G');
+                }
+
+                Logger.Log(`${index++ + 1}/${questionsMap.size} (Unique questions found: ${uniqueQuestionsCount})`, "Parser", index === questionsMap.size);
+            }
+
             if (!uniqueQuestions.hasOwnProperty(sortedQuestion)) {
                 uniqueQuestions[sortedQuestion] = {
                     question,
                     answer
                 }
+                uniqueQuestionsCount++;
             }
         }
 
@@ -54,6 +86,8 @@ export const getMdlQuestions = async () => {
                 resultQuestionsMap.set(q.question, q.answer);
             }
         }
+
+        Logger.Log(`Total questions found: ${resultQuestionsMap.size}\n`, "Parser");
 
         questions = Questions.Create(resultQuestionsMap);
     }

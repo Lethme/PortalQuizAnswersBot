@@ -1,3 +1,4 @@
+import {getWords} from "../utils";
 import {Question} from "./Question";
 
 class Questions {
@@ -7,10 +8,18 @@ class Questions {
         this.answersMap = answers;
     }
 
+    get Size() {
+        return this.answersMap.size;
+    }
+
     async find(findSeq: string): Promise<Question | undefined> {
-        for (const [key, value] of this.answersMap.entries()) {
-            if (key.toLowerCase().includes(findSeq.toLowerCase())) {
-                return { question: key, answer: value };
+        const words = getWords(findSeq, {outputMode: "lowercase"});
+
+        for (const [question, answer] of this.answersMap.entries()) {
+            const loweredQuestion = question.toLowerCase();
+
+            if (words.every(word => loweredQuestion.includes(word))) {
+                return {question, answer} as Question;
             }
         }
 
@@ -18,11 +27,14 @@ class Questions {
     }
 
     async findAll(findSeq: string): Promise<Array<Question>> {
+        const words = getWords(findSeq, {outputMode: "lowercase"});
         const matches: Array<Question> = [];
 
-        for (const [key, value] of this.answersMap.entries()) {
-            if (key.toLowerCase().includes(findSeq.toLowerCase())) {
-                matches.push({ question: key, answer: value });
+        for (const [question, answer] of this.answersMap.entries()) {
+            const loweredQuestion = question.toLowerCase();
+
+            if (words.every(word => loweredQuestion.includes(word))) {
+                matches.push({question, answer} as Question);
             }
         }
 

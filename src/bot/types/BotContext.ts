@@ -1,4 +1,4 @@
-import {Context, NarrowedContext} from "telegraf";
+import {Context} from "telegraf";
 
 export interface BotSessionData {
     request?: string,
