@@ -1,4 +1,6 @@
 export function trimSubstr(str: string, substr: string): string {
+    if (!str) return "";
+    
     const startIndex = str.indexOf(substr);
     const endIndex = str.lastIndexOf(substr) + substr.length;
 

@@ -4,3 +4,4 @@ dist
 .idea
 /public/*.sql
 sessions.json
+access.json
