@@ -1,6 +1,12 @@
 {
-    "watch": ["src"],
+    "watch": [
+        "src",
+        ".development.env",
+        ".test.env"
+    ],
     "ext": "ts",
-    "ignore": ["src/**/*.test.ts"],
+    "ignore": [
+        "src/**/*.test.ts"
+    ],
     "exec": "cls && ts-node ./src/main.ts"
 }
